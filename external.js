@@ -285,9 +285,9 @@ function calculateShellThickness() {
 
   let t;
   if (type === "Di") {
-    t = (Pd * D / 2) / (S * E - 0.6 * Pd);
+    t = (Pd * D / 2) / (S * E - 0.6 * Pd) + 2;
   } else if (type === "Do") {
-    t = (Pd * D / 2) / (S * E + 0.4 * Pd);
+    t = (Pd * D / 2) / (S * E + 0.4 * Pd) + 2;
   } else {
     outputEl.textContent = "Invalid input";
     return;
@@ -309,19 +309,20 @@ function calculateHeadThickness() {
   const DEl = document.querySelector('.diameterValue');
   const typeEl = document.getElementById("diameterType");
   const outputEl = document.querySelector('.headOutput');
-  const geometryEl = document.querySelector('.head-type input:checked');
+  const geometryEl = document.querySelector('.head-shape input:checked');
+
 
   if (!PdEl || !SEl || !EEl || !DEl || !typeEl || !outputEl || !geometryEl) {
-    console.warn("One or more required elements for Head thickness calculation are missing.");
+    console.warn("Missing elements for head thickness calculation");
     return;
   }
 
-  const Pd = parseFloat(PdEl.value);
-  const S = parseFloat(SEl.value);
-  const E = parseFloat(EEl.textContent);
-  const D = parseFloat(DEl.value);
+  const Pd = parseFloat(PdEl.textContent || PdEl.value);
+  const S  = parseFloat(SEl.textContent || SEl.value);
+  const E  = parseFloat(EEl.textContent || EEl.value);
+  const D  = parseFloat(DEl.value);
   const type = typeEl.value;
-  const geometry = geometryEl.nextSibling.textContent.trim();
+  const geometry = geometryEl.value;
 
   if ([Pd, S, E, D].some(v => isNaN(v))) {
     outputEl.textContent = "";
@@ -330,32 +331,26 @@ function calculateHeadThickness() {
 
   let t;
 
-  if (geometry === 'Hemisphere') {
+  if (geometry === "Hemisphere") {
     if (type === "Di") {
-      t = (Pd * D/2) / (2 * S * E - 0.2 * Pd);
-    } else if (type === "Do") {
-      t = ((Pd * D/2) / (2 * S * E + 0.8 * Pd));
-    } 
-  } else if (geometry === 'Standard Ellipsoidal') {
+      t = (Pd * D/2) / (2 * S * E - 0.2 * Pd) + 2;
+    } else {
+      t = (Pd * D/2) / (2 * S * E + 0.8 * Pd) + 2;
+    }
+  } else if (geometry === "Standard Ellipsoidal") {
     if (type === "Di") {
-      t = (Pd * D) / (2 * S * E - 0.2 * Pd);
-    } else if (type === "Do") {
-      t = (Pd * D) / (2 * S * E + 1.8 * Pd);
-    } 
-  } else if (geometry === 'Ellipsoidal') {
+      t = (Pd * D) / (2 * S * E - 0.2 * Pd) + 2;
+    } else {
+      t = (Pd * D) / (2 * S * E + 1.8 * Pd) + 2;
+    }
+  } else if (geometry === "Ellipsoidal") {
     const K = calculateKvalue();
     if (type === "Di") {
-      t = (Pd * D * K) / (2 * S * E - 0.2 * Pd);
-    } else if (type === "Do") {
-      t = (Pd * D * K) / (2 * S * E + 2 * Pd *(K - 0.1));
-    } 
-  } else if (geometry === 'Standard Torisphere') {
-      if (type === "Di") {
-        t = (0.885 * Pd * D) / (S * E - 0.1 * Pd);
-      } else if (type === "Do") {
-        t = (0.885 * Pd * D) / (S * E + 0.8 * Pd );
-      } 
-  } 
+      t = (Pd * D * K) / (2 * S * E - 0.2 * Pd) + 2;
+    } else {
+      t = (Pd * D * K) / (2 * S * E + 2 * Pd * (K - 0.1)) + 2;
+    }
+  }
   outputEl.textContent = Math.ceil(t);
 }
   
@@ -370,47 +365,12 @@ function calculateKvalue () {
 }
 
 document.querySelectorAll(
-  "#pressureDesignResult, .diameterValue, .material-type, .head-type, .joint-type, #temperatureResult, #inputTemperature, #diameterType"
+  "#pressureDesignResult, .diameterValue, .material-type, .head-type, .joint-type, #temperatureResult, #inputTemperature, #diameterType, .head-shape"
 ).forEach(el => {
   el.addEventListener("input", calculateHeadThickness);
   el.addEventListener("change", calculateHeadThickness);
 });
 
-function calculatePcShell () {
-  const EyEl = document.querySelector('.inputEy');
-  const vEl = document.querySelector('.poissonInput');
-  const lobesEl = document.querySelector('.lobesInput');
-  const shellThicknessEl = document.querySelector('.shellOutput');
-
-  if (!EyEl || !vEl || !lobesEl || !shellThicknessEl) {
-    console.warn("One or more required elements for Head thickness calculation are missing.");
-    return;
-  }
-
-  const Ey = parseFloat(EyEl.value);
-  const v = parseFloat(vEl.value);
-  const lobes = parseFloat(lobesEl.value);
-  const t = parseFloat(shellThicknessEl.textContent);
-  const Do = calculateDo();
-
-  if ([Ey, v, lobes, t, Do].some(val => isNaN(val))) {
-    document.querySelector('.PcShellOutput').textContent = "";
-    return;
-  }
-
-  const Pc = ((1 / 3)*(((2*(Ey*1000)*(lobes ** 2 - 1)))/(1-v**2))*((t / Do) ** 3)).toFixed(4);
-
-  document.querySelector('.PcShellOutput').textContent = Pc;
-
-  calculateSFBasedOnExternal();
-}
-
-document.querySelectorAll(
-  "#pressureDesignResult, .diameterValue, .material-type, .head-type, .joint-type, #temperatureResult, #inputTemperature, #diameterType, .poissonInput, .inputEy, .lobesInput"
-).forEach(el => {
-  el.addEventListener("input", calculatePcShell);
-  el.addEventListener("change", calculatePcShell);
-});
 
 function calculateDo() {
   const type = document.getElementById("diameterType").value;
@@ -434,6 +394,12 @@ function calculatePcHead() {
   const outputEl = document.querySelector('.PcHeadOutput');
   const Rs = calculateRs();
 
+  console.log(EyEl);
+  console.log(vEl);
+  console.log(shellThicknessEl);
+  console.log(outputEl);
+  console.log(Rs);
+
   if (!EyEl || !vEl || !shellThicknessEl || !outputEl) {
     console.warn("Missing input or output element for PcHead calculation");
     return;
@@ -443,6 +409,11 @@ function calculatePcHead() {
   const v = parseFloat(vEl.value);
   const t = parseFloat(shellThicknessEl.textContent);
   const Do = calculateDo();
+
+  console.log(Ey);
+  console.log(v);
+  console.log(t);
+  console.log(Do);
 
   if ([Ey, v, t, Do].some(val => isNaN(val))) {
     outputEl.textContent = "";
@@ -461,9 +432,9 @@ document.querySelectorAll(
 });
 
 function calculateRs() {
-  const geometryEl = document.querySelector('.head-type input:checked');
+  const geometryEl = document.querySelector('.head-shape input:checked');
 
-  const geometry = geometryEl.nextSibling.textContent.trim();
+  const geometry = geometryEl.value;
   const majorAxisE1 = document.getElementById("majorAxis");
   const minorAxisE1 = document.getElementById("minorAxis");
 
@@ -471,13 +442,16 @@ function calculateRs() {
   const minorAxis = parseFloat(minorAxisE1.value);
 
   const Do = calculateDo();
-  const b = (minorAxis * Do) / majorAxis;
+  
+
+  console.log(Do);
 
   let Rs;
 
   if (geometry === 'Hemisphere') {
     Rs = Do / 2;
   } else if (geometry === 'Ellipsoidal' || geometry === 'Standard Ellipsoidal') {
+    const b = (minorAxis * Do) / majorAxis;
     Rs = (Do / 2) ** 2 / b;
   } else if (geometry === 'Standard Torisphere') {
     Rs = calculateDi();
@@ -676,7 +650,7 @@ document.querySelectorAll("#pressureDesignResult, .pressure-input-js, .diameterV
 
 document.addEventListener("DOMContentLoaded", function () {
   const ratioContainer = document.querySelector(".ratio-container");
-  const headRadios = document.querySelectorAll('.head-type input[name="groupName"]');
+  const headRadios = document.querySelectorAll('.head-shape input[name="groupName"]');
 
   headRadios.forEach(radio => {
     radio.addEventListener("change", function () {
@@ -689,6 +663,179 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+document.addEventListener("DOMContentLoaded", function () {
+  const shellType = document.querySelector(".shellType");
+  const generalInputs = document.querySelector(".general-inputs");
+  const kcInput = document.querySelector(".kc-input");
+
+  function toggleInputs() {
+    if (shellType.value === "general") {
+      generalInputs.style.display = "block";
+      kcInput.style.display = "none";
+    } else if (shellType.value === "kc") {
+      generalInputs.style.display = "none";
+      kcInput.style.display = "block";
+    }
+  }
+
+  shellType.addEventListener("change", toggleInputs);
+
+  toggleInputs();
+});
+
+/*
+
+function calculatePcShellKc () {
+  const EyEl = document.querySelector('.inputEy');
+  const shellThicknessEl = document.querySelector('.shellOutput');
+  const KcEl = document.querySelector('.inputKc');
+
+  if (!EyEl || !shellThicknessEl || !Kc) {
+    console.warn("One or more required elements for Head thickness calculation are missing.");
+    return;
+  }
+
+  const Kc = parseFloat(KcEl.value);
+  const Ey = parseFloat(EyEl.value);
+  const t = parseFloat(shellThicknessEl.textContent);
+  const Do = calculateDo();
+
+  if ([Ey, t, Do].some(val => isNaN(val))) {
+    document.querySelector('.PcShellOutput').textContent = "";
+    return;
+  }
+
+  const Pc = (Kc * Ey * (t / Do) ** 3).toFixed(4);
+
+  document.querySelector('.PcShellOutput').textContent = Pc;
+
+  calculateSFBasedOnExternal();
+}
+
+document.querySelectorAll(
+  "#pressureDesignResult, .diameterValue, .material-type, .head-type, .joint-type, #temperatureResult, #inputTemperature, #diameterType, .poissonInput, .inputEy, .lobesInput, .shellType"
+).forEach(el => {
+  el.addEventListener("input", calculatePcShellKc);
+  el.addEventListener("change", calculatePcShellKc);
+});
+
+function calculatePcShell () {
+  const EyEl = document.querySelector('.inputEy');
+  const vEl = document.querySelector('.poissonInput');
+  const lobesEl = document.querySelector('.lobesInput');
+  const shellThicknessEl = document.querySelector('.shellOutput');
+
+
+
+  if (!EyEl || !vEl || !lobesEl || !shellThicknessEl) {
+    console.warn("One or more required elements for Head thickness calculation are missing.");
+    return;
+  }
+
+  const Ey = parseFloat(EyEl.value);
+  const v = parseFloat(vEl.value);
+  const lobes = parseFloat(lobesEl.value);
+  const t = parseFloat(shellThicknessEl.textContent);
+  const Do = calculateDo();
+
+
+  if ([Ey, v, lobes, t, Do].some(val => isNaN(val))) {
+  console.error("One of the values is NaN!", { Ey, v, lobes, t, Do });
+}
+
+  if ([Ey, v, lobes, t, Do].some(val => isNaN(val))) {
+    document.querySelector('.PcShellOutput').textContent = "";
+    return;
+  }
+
+  const Pc = ((1 / 3)*(((2*(Ey*1000)*(lobes ** 2 - 1)))/(1-v**2))*((t / Do) ** 3)).toFixed(4);
+
+  document.querySelector('.PcShellOutput').textContent = Pc;
+
+  calculateSFBasedOnExternal();
+}
+
+document.querySelectorAll(
+  "#pressureDesignResult, .diameterValue, .material-type, .head-type, .joint-type, #temperatureResult, #inputTemperature, #diameterType, .poissonInput, .inputEy, .lobesInput, .shellType"
+).forEach(el => {
+  el.addEventListener("input", calculatePcShell);
+  el.addEventListener("change", calculatePcShell);
+});
+
+*/
+
+function calculatePcShellGeneral() {
+  const EyEl = document.querySelector('.inputEy');
+  const vEl = document.querySelector('.poissonInput');
+  const lobesEl = document.querySelector('.lobesInput');
+  const shellThicknessEl = document.querySelector('.shellOutput');
+
+  if (!EyEl || !vEl || !lobesEl || !shellThicknessEl) {
+    console.warn("Missing elements for PcShell General calculation");
+    return;
+  }
+
+  const Ey = parseFloat(EyEl.value);
+  const v = parseFloat(vEl.value); 
+  const lobes = parseFloat(lobesEl.value);
+  const t = parseFloat(shellThicknessEl.textContent);
+  const Do = calculateDo();
+
+  if ([Ey, v, lobes, t, Do].some(val => isNaN(val))) {
+    document.querySelector('.PcShellOutput').textContent = "";
+    return;
+  }
+
+  const Pc = ((1/3) * ((2 * (Ey * 1000) * (lobes ** 2 - 1)) / (1 - v ** 2)) * ((t / Do) ** 3)).toFixed(4);
+  document.querySelector('.PcShellOutput').textContent = Pc;
+
+  calculateSFBasedOnExternal();
+}
+
+function calculatePcShellKc() {
+  const EyEl = document.querySelector('.inputEy');
+  const shellThicknessEl = document.querySelector('.shellOutput');
+  const KcEl = document.querySelector('.inputKc');
+
+  if (!EyEl || !shellThicknessEl || !KcEl) {
+    console.warn("Missing elements for PcShell Kc calculation");
+    return;
+  }
+
+  const Ey = parseFloat(EyEl.value);
+  const t = parseFloat(shellThicknessEl.textContent);
+  const Do = calculateDo();
+  const Kc = parseFloat(KcEl.value);
+
+  if ([Ey, t, Do, Kc].some(val => isNaN(val))) {
+    document.querySelector('.PcShellOutput').textContent = "";
+    return;
+  }
+
+  const Pc = (Kc * Ey * (t / Do) ** 3).toFixed(4);
+  document.querySelector('.PcShellOutput').textContent = Pc;
+
+  calculateSFBasedOnExternal();
+}
+
+// Controller: chooses which one to call
+function calculatePcShell() {
+  const shellType = document.querySelector('.shellType').value;
+
+  if (shellType === "general") {
+    calculatePcShellGeneral();
+  } else if (shellType === "kc") {
+    calculatePcShellKc();
+  }
+}
+
+// Attach only the controller to inputs
+document.querySelectorAll(
+  "#pressureDesignResult, .diameterValue, .material-type, .head-type, .joint-type, #temperatureResult, #inputTemperature, #diameterType, .poissonInput, .inputEy, .lobesInput, .inputKc, .shellType"
+).forEach(el => {
+  el.addEventListener("input", calculatePcShell);
+  el.addEventListener("change", calculatePcShell);
+});
 
 
 
